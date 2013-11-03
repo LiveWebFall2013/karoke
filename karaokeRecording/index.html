@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+
+<html>
+  <head>
+
+    <style type='text/css'>
+
+      ul { 
+        list-style: none; 
+      }
+      
+      #recordingslist audio { 
+        display: block; margin-bottom: 10px; 
+      }
+
+    </style>
+
+    <script type="text/javascript">
+
+      var audioContext;
+      var recorder;
+
+      var init = function() {
+        try {
+
+          window.AudioContext = window.AudioContext || window.webkitAudioContext;
+          navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia;
+          window.URL = window.URL || window.webkitURL;
+          
+          audioContext = new AudioContext;
+
+        } catch (e) {
+          alert('No web audio support in this browser!');
+        }
+        
+        navigator.getUserMedia({audio: true}, startUserMedia, function(e) {
+        });
+      };
+
+      var startUserMedia = function(stream) {
+        var input = audioContext.createMediaStreamSource(stream);
+        
+        input.connect(audioContext.destination);
+        
+        recorder = new Recorder(input);
+      };
+
+      var startRecording = function(button) {
+        recorder && recorder.record();
+        button.disabled = true;
+        button.nextElementSibling.disabled = false;
+      };
+
+      var stopRecording = function(button) {
+        recorder && recorder.stop();
+        button.disabled = true;
+        button.previousElementSibling.disabled = false;
+        
+        createDownloadLink();
+        
+        recorder.clear();
+      };
+
+      var createDownloadLink = function() {
+        recorder && recorder.exportWAV(function(blob) {
+          var url = URL.createObjectURL(blob);
+          var listItem = document.createElement('li');
+          var audioElem = document.createElement('audio');
+          var downloadLink = document.createElement('a');
+          var downloadText = document.createElement('p');
+
+          downloadText.innerHTML = "Click here to download: ";
+          
+          audioElem.controls = true;
+          audioElem.src = url;
+          downloadLink.href = url;
+          downloadLink.download = new Date().toISOString() + '.wav'; //text link as it appears on page
+          downloadLink.innerHTML = downloadLink.download;
+          listItem.appendChild(audioElem);
+          listItem.appendChild(downloadText);
+          listItem.appendChild(downloadLink);
+          recordingslist.appendChild(listItem);
+        });
+      };
+
+    </script>
+    <script src="recorder.js"></script>
+  </head>
+  <body onload="init();">
+
+    <button onclick="startRecording(this);">Start Recording</button>
+    <button onclick="stopRecording(this);" disabled>Stop Recording</button>
+  
+    <h2>Recordings</h2>
+    <ul id="recordingslist"></ul>  
+  
+  </body>
+</html>
