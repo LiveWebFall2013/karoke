@@ -19,6 +19,7 @@
 
       var audioContext;
       var recorder;
+			var audioSource = null;
 
       var init = function() {
         try {
@@ -83,6 +84,42 @@
         });
       };
 
+    // Slover scripts for boosting audio and playing background vocals
+    
+			var playBg = function(){
+
+				var ran = Math.floor(Math.random()*3)
+
+				if (ran == 0){
+					document.getElementById('bg1').play();
+				}
+				else if (ran == 1){
+					document.getElementById('bg2').play();
+				}
+				else if (ran == 2){
+					document.getElementById('bg3').play();
+				}
+			}
+
+			function appyFilter() {
+
+				// Create the filter
+				var filter = audioContext.createBiquadFilter();
+
+			    // Clamp the frequency between the minimum value (40 Hz) and half of the sampling rate.
+			    var minValue = 40;
+			    var maxValue = audioContext.sampleRate / 2;
+			    // Logarithm (base 2) to compute how many octaves fall in the range.
+			    var numberOfOctaves = Math.log(maxValue / minValue) / Math.LN2;
+			    // Compute a multiplier from 0 to 1 based on an exponential scale.
+			    var multiplier = Math.pow(2, numberOfOctaves * (2));
+			    // Get back to the frequency value between min and max.
+			    filter.frequency.value = maxValue * multiplier * 100000;	
+				// Create the audio graph.
+				audioSource.connect(filter);
+				filter.connect(audioContext.destination);
+		}
+		
     </script>
     <script src="recorder.js"></script>
   </head>
@@ -93,6 +130,21 @@
   
     <h2>Recordings</h2>
     <ul id="recordingslist"></ul>  
-  
+
+		<button onclick="appyFilter()">Boost Audio!</button>
+		<button onclick="playBg()">Background Singer!</button>
+
+    <!-- Hidden Background tags-->
+		<audio id="bg1" style="display:none">
+			<source src="bg1.mp3" type="audio/mpeg">
+		</audio>
+		<audio id="bg2" style="display:none">
+			<source src="bg2.mp3" type="audio/mpeg">
+		</audio>
+		<audio id="bg3" style="display:none">
+			<source src="bg3.mp3" type="audio/mpeg">
+		</audio>
+    <!-- Hidden Background tags-->
+
   </body>
 </html>
