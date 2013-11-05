@@ -1,0 +1,537 @@
+<html>
+	<head>
+		<style>
+			body {
+				background-image: url("http://jeffreypmartin.com/wp-content/uploads/2013/09/LOP-Backgrounds-mic-web.jpg");
+				height:100%;
+				font-family: Arial, Helvetica, sans-serif;	
+				font-size:12px; 
+				color:#663300;
+				margin: 0px;
+				padding: 0px;
+			}	
+
+			header{
+				display:block; 
+			}
+
+			a:link, a:visited, a:active { 
+				text-decoration:none; 
+				color:#000; 
+			}
+
+			#main {
+				padding: 60px 180px 20px;
+				min-width: 500px;
+			}
+			#main #title {
+				height: 40px;
+				border-bottom: 1px solid #663300;
+				position: relative;
+				margin: 0 0 25px 0;
+			}
+
+			#main #controller{
+				min-width : 600px;
+				height: 300px;
+				padding: 20px;
+				background-color: rgba(0,0,0,0.7);	
+				position: absolute;
+
+			}
+
+			#main #feedList{
+
+				height: 300px;
+				padding: 20px;
+				position: relative;
+				float: right;
+			}
+
+			#main #feedList #feedTitle{
+				margin : 0px;
+				padding : 0px;
+				position: relative;
+				border-top: 1px solid #663300;
+				border-bottom: 1px solid #663300;
+			}
+
+			#main #feedList #feedBody{
+				margin : 0px;
+				padding : 0px;
+				position: relative;
+			}
+
+			#controller #comment{
+				font-weight: lighter; 
+				color: #ffffff;
+			}
+
+			#controller #songList{
+				width: 300px;	
+				position: relative;
+			}
+
+			#controller #effect-group{
+				width: 600px;
+				height: 54px;
+				text-align: center;
+			}
+
+			#controller #effect-group #effect{
+				width: 130px;	
+				float: left;
+				margin-right: 30px; 
+				position: relative;
+				background-color:#090909;
+				padding: 20px;
+				color: #ffffff;
+				
+			}
+			#songinput {
+				width: 570px;
+			}
+
+			#like, #dislike, #record, #stop {
+				width: 130px;	
+				float: left;
+				margin-right: 30px; 
+				position: relative;
+				background-color:#090909;
+				padding: 20px;
+				color: #ffffff;
+			}
+			
+			#volume {
+
+				width: 290px;
+			}
+
+			span.lyricHidden {
+      			display: none;
+    		}
+   
+   			span.lyricHighlight {
+      			
+      			font-weight: bold;
+      			display: inline;
+    		}
+    
+    		span.lyricActive {
+      		
+      			font-weight: normal;
+      			display: inline;
+  			}
+
+  			ul { 
+        		list-style: none; 
+      		}
+      
+      		#recordingslist audio { 
+        		display: block; margin-bottom: 10px; 
+      		}
+
+		</style>
+		<script src="recorder.js"></script>
+		<script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>	
+		<script src="http://localhost:8080/socket.io/socket.io.js"></script>		
+		<script type=”text/javascript”>
+			
+			var socket=null;
+    		var userList = [];
+     		var status = " ";
+
+     		var audioContext;
+      		var recorder;
+      		var audioSource = null;
+
+			var karaoke = new Object();
+			var socket = io.connect('http://localhost:8080');
+			
+			//socket.io part
+			var init = function() {
+
+				try {
+
+		          	window.AudioContext = window.AudioContext || window.webkitAudioContext;
+		          	navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia;
+		          	window.URL = window.URL || window.webkitURL;
+          
+          			audioContext = new AudioContext;
+
+        		} catch (e) {
+          			alert('No web audio support in this browser!');
+        		}
+        		navigator.getUserMedia({audio: true}, startUserMedia, function(e) {
+        		});
+     	    };
+
+	        var startUserMedia = function(stream) {
+
+		        var input = audioContext.createMediaStreamSource(stream);        
+		        input.connect(audioContext.destination);
+		        recorder = new Recorder(input);
+	  
+    	    };
+
+	      	var startRecording = function(button) {
+	  
+		        recorder && recorder.record();
+		        button.disabled = true;
+		        button.nextElementSibling.disabled = false;
+		  
+	      	};
+
+	      	var stopRecording = function(button) {
+	  
+		        recorder && recorder.stop();
+		        button.disabled = true;
+		        button.previousElementSibling.disabled = false;
+		        
+		        createDownloadLink();
+		        
+		        recorder.clear();
+		  
+	      	};
+
+	      	var createDownloadLink = function() {
+		         
+		          recorder && recorder.exportWAV(function(blob) {
+		          var url = URL.createObjectURL(blob);
+		          var listItem = document.createElement('li');
+		          var audioElem = document.createElement('audio');
+		          var downloadLink = document.createElement('a');
+		          var downloadText = document.createElement('p');
+
+		          downloadText.innerHTML = "Click here to download: ";
+		          
+		          audioElem.controls = true;
+		          audioElem.src = url;
+		          downloadLink.href = url;
+		          downloadLink.download = new Date().toISOString() + '.wav'; //text link as it appears on page
+		          downloadLink.innerHTML = downloadLink.download;
+		          listItem.appendChild(audioElem);
+		          listItem.appendChild(downloadText);
+		          listItem.appendChild(downloadLink);
+		          recordingslist.appendChild(listItem);
+		        });
+
+		 	 };
+
+			socket.on('connect', function() {
+            	socket.emit('addUser', prompt("What's your name"));
+     		});
+
+		    // update the number of users and decide the singer and audience
+		    socket.on('update', function(users) {
+		        userList = users;
+		        $('#user').empty(); //Remove all text within 'user' id
+		        for (var i = 0; i < userList.length; i++) {
+		            if (i == 0) {
+		                status = " (singing)";
+		                $('#user').append("<h3>" + userList[i] + status + "</h3>");
+		            } else if (i == 1) {
+		                status = " (you are next)";
+		                $('#user').append("<h3>" + userList[i] + status + "</h3>");
+		            } else {
+		                status = " (listening)";
+		                $('#user').append("<h3>" + userList[i] + status + "</h3>");
+		            }
+		        }
+		    });
+
+		    //Annoucing likes
+		    socket.on("nlikes", function(data) {
+		        console.log(data + "Number of like");
+		        document.getElementById('like-count').innerHTML = data;
+		    });
+
+		    //Annoucing dislikes
+		    socket.on('nDisLikes', function(data) {
+		        console.log(data.toString() + ' Number of Dislikes');
+		        document.getElementById('disLike-count').innerHTML = data ;
+		    });
+
+		    //send a msg to sever about which face we have selected
+		    function selectButton(imgObj){
+		        var buttonImg = new Image();
+		        buttonImg.src = imgObj.src;
+		        socket.emit("button_id", imgObj.id);
+		    }
+     
+		    // accept what the singer's backgound music and play
+		    socket.on('othersPlayBg', function(ran){
+		            if (ran == 0){
+		                document.getElementById('bg1').play();
+		            }
+		            else if (ran == 1){
+		                document.getElementById('bg2').play();
+		            }
+		            else if (ran == 2){
+		                document.getElementById('bg3').play();
+		            }
+		    });
+
+		    // functio of play backgound music 
+		    var playBg = function(){
+		             var ran = Math.floor(Math.random()*3);
+		             if (ran == 0){
+		                     document.getElementById('bg1').play();
+		             }
+		             else if (ran == 1){
+		                     document.getElementById('bg2').play();
+		             }
+		             else if (ran == 2){
+		                     document.getElementById('bg3').play();
+		             }    
+		        socket.send('playBg',ran);
+		    }  
+
+
+		    socket.on('othersFilter', function(){
+		        appyFilter();
+		    });
+
+
+		    function appyFilter() {
+
+		       //send it to everyone else
+		       socket.emit('appyFilter');
+
+		       // Create the filter
+		       var filter = audioContext.createBiquadFilter();
+
+		           // Clamp the frequency between the minimum value (40 Hz) and half of the sampling rate.
+		           var minValue = 40;
+		           var maxValue = audioContext.sampleRate / 2;
+
+		           // Logarithm (base 2) to compute how many octaves fall in the range.
+		           var numberOfOctaves = Math.log(maxValue / minValue) / Math.LN2;
+
+		           // Compute a multiplier from 0 to 1 based on an exponential scale.
+		           var multiplier = Math.pow(2, numberOfOctaves * (2));
+
+		           // Get back to the frequency value between min and max.
+		           filter.frequency.value = maxValue * multiplier * 100000;        
+
+		           // Create the audio graph.
+		           audioSource.connect(filter);
+		           filter.connect(audioContext.destination);
+		       
+		    }   
+
+			//lyric part
+
+			var getSongDB = function() {
+				// pull JSON here
+			};
+			    
+			socket.on('song', function(data) {
+			    karaoke.song = data;
+			});
+			
+			/*    
+			    karaoke.songDB = [
+			        {
+			          "name" : "We Will Rock You",
+			          "artist" : "Queen", 
+			          "url": "http://somethingsomething",
+			          "lyrics" : [
+			            {
+			              "startMS": 12200,
+			              "endMS": 14400,
+			              "line": "Buddy you're a boy make a big noise"
+			            },
+			            {
+			              "startMS": 14500,
+			              "endMS":  17600,
+			              "line": "Playin' in the street gonna be a big man some day"
+			            },
+			            {
+			              "startMS": 17700,
+			              "endMS": 19300,
+			              "line": "You got mud on yo' face"
+			            },
+			          ]
+			        }
+			    ]; */
+
+			var loadLyrics = function() {
+			    //console.log('inside loadLyrics');
+			    //console.dir(karaoke);
+			      
+			    if (!!karaoke.song) {
+			        var lineBox = document.getElementById('lineBox');
+			        var content = "";
+			        for (lineId in karaoke.song.lyrics) {
+			          //console.log('adding line ' + karaoke.song.lyrics[lineId].line);
+			          content += '<span class="lyricHidden" id="line' + lineId + '">' + karaoke.song.lyrics[lineId].line + '<br /></span>';
+			        }
+			        lineBox.innerHTML = content;
+			        //console.log('content should be ' + content);
+			    }
+			};
+			    
+			// call this as soon as the "play" button is clicked for the song audio
+			var playLyrics = function() {
+			    //console.log('in playLyrics');
+			    for (var lineId in karaoke.song.lyrics) {
+			        //console.log('lineId ' + lineId);
+			        var line = document.getElementById('line' + lineId);
+			        if (Number(lineId) === 0) { // first line is special
+			          activateLine(Number(lineId));
+			        }
+			        else if (Number(lineId) === karaoke.song.lyrics.length) { // last line is special
+			          setTimeout(hideLine, karaoke.song.lyrics[lineId].endMS, (Number(lineId) + 1));
+			        }
+			        setTimeout(highlightLine, karaoke.song.lyrics[lineId].startMS, lineId);
+			        setTimeout(unHighlightLine, karaoke.song.lyrics[lineId].endMS, lineId);
+			    }
+			};
+
+			var activateLine = function(i) {
+			    var line = document.getElementById('line' + Number(i));
+			    if (!!line) {
+			        line.removeAttribute('class');
+			        line.setAttribute('class', 'lyricActive');
+			      }
+			};
+
+			var hideLine = function(i) {
+			    var line = document.getElementById('line' + Number(i));
+			    if (!!line) {
+			        line.removeAttribute('class');
+			        line.setAttribute('class', 'lyricHidden');
+			    }
+			};
+			    
+			var highlightLine = function(i) {
+			    // change CSS class on old line
+			    if (Number(i) > 0) {
+			        hideLine(Number(i) - 1);
+			    }
+			      
+			var line = document.getElementById('line' + Number(i));
+			    if (!!line) {
+			        line.removeAttribute('class');
+			        line.setAttribute('class', 'lyricHighlight');
+			    }
+			      
+			    if (Number(i) < karaoke.song.lyrics.length) {
+			        activateLine(Number(i) + 1);
+			    }
+			};
+			    
+			var unHighlightLine = function(i) {
+			    activateLine(Number(i));
+			};
+
+			//if new socket is a SINGER--> 
+
+			var getSinger = function(){
+				document.getElementById("controller").style.display = "none";
+				document.getElementById("feedList").style.display = "none";
+				document.getElementById("singerdisplay").style.display = "inline";
+
+			};
+
+			//if new socket is a Listener--> 
+
+			var getListener = function(){
+				document.getElementById("controller").style.display = "none";
+				document.getElementById("feedList").style.display = "none";
+				document.getElementById("listenerdisplay").style.display = "inline";
+
+			};
+
+		</script>
+	</head>
+	<body onload = "init();">
+		<div id= "main">
+			<header id  = "title">
+				<h1 style = "float:left;">LIVE WEB KARAOKE!!</h1>
+				<h4 style = "float:right;">created by NYU ITP 2013 Live Web Class</h4>
+			</header>
+			<div id = "leftblock">
+			    <!--******************* UX for mainpage *******************-->
+				<div id = "controller" style = "display:inline;">
+					<h1 id = "comment">1. Choose a song you want to sing!</h1>
+					<select id = "songList">
+						<option>song name 1</option>
+						<option>song name 2</option>
+						<option>song name 3</option>
+					</select>
+					<h1 id = "comment">2. Choose an effect for your song!</h1>
+					<div id = "effect-group">
+						<a href="#" onclick="appyFilter()">
+		 					<div id = "effect">Audio Boost!</div>
+						</a>
+						<a href="#" onclick="playBg()">
+		 					<div id = "effect">Background Singer!</div>
+						</a>
+					</div>
+					<h1 id = "comment">3. Click Submit!</h1>
+					<input type ="submit" id = "songinput" value = "Start to sing a song!"></input>
+				</div>
+				<!--*******************************************************-->
+				<!--**************** UX for singer socket *****************-->
+				<div id = "singerdisplay" style = "display:none;">
+					<div id =  "greeting"><h1 id = "comment">You're singing now!</h1></div>
+					  <button type="button" onclick="loadLyrics(); playLyrics();">Play</button>
+ 					  <div id="lineBox">
+					<audio controls>
+						<source src=" " type = "audio/mp3">
+					</audio>
+					<div id = "scoredisplay">
+						<div id = "likecount"><h1>0 Likes</h1></div>
+						<div id = "dislikecount"><h1>0 dislikes</h1></div>
+					</div>
+					<div id = "recording">
+						<button id = "record" onclick="startRecording(this);">Start Recording</button>
+						<button id = "stop" onclick="stopRecording(this);" disabled>Stop Recording</button>
+					</div>
+				</div>
+				<!--*******************************************************-->
+				<!--**************** UX for listener socket ***************-->
+				<div id = "listenerdisplay" style = "display:none;">
+					<div id="lineBox">
+					<audio autoplay>
+						<source src=" " type = "audio/mp3">
+					</audio>
+					<h1 id = "comment">You're listening now!</h1>
+					<input type = "range" name = "volume" id = "volume" max = "10" min = "1" step=".1">
+					<h1 id = "comment">Do you like it?</h1>
+					<div id = "scorebutton">
+						<button id = "like" onclick='selectButton(this)'>Like</button>
+						<button id = "dislike" onclick='selectButton(this)'>Dislike</button>
+					</div>
+				</div>
+				<!--*******************************************************-->
+			</div>
+
+			<div id = "rightblock">
+				<!--******************* UX for mainpage *******************-->				
+				<div id = "feedList" style = "display:inline;">
+					<div id = "feedTitle"><h4>Listen to recorded songs</h4></div>
+					<div id = "feedBody">
+						<ul id="recordingslist"></ul> 
+					</div>
+				</div>
+				<!--*******************************************************-->
+			</div>	
+		</div>
+		<!--******************* hidden bg audio files *******************-->				
+		<audio id="bg1" style="display:none">
+			<source src="bg1.mp3" type="audio/mpeg">
+		</audio>
+		<audio id="bg2" style="display:none">
+			<source src="bg2.mp3" type="audio/mpeg">
+		</audio>
+		<audio id="bg3" style="display:none">
+			<source src="bg3.mp3" type="audio/mpeg">
+		</audio>
+
+
+
+	</body>
+</html>
