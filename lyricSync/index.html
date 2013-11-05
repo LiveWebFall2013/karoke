@@ -76,9 +76,9 @@
     var playLyrics = function() {
       console.log('in playLyrics');
       for (var lineId in karaoke.song.lyrics) {
-        console.log('lineId ' + lineId);
+        //console.log('lineId ' + lineId);
         var line = document.getElementById('line' + lineId);
-        if (lineId == 0) { // first line is special
+        if (Number(lineId) === 0) { // first line is special
           //console.log('setting first line');
           line.removeAttribute('class');
           line.setAttribute('class', 'lyricActive');
@@ -90,11 +90,13 @@
     
     var highlightLine = function(lineId) {
       // change CSS class on old line
-      if (lineId > 0) {
-        var oldLine = document.getElementById('line' + (lineId-1));
+      if (Number(lineId) > 0) {
+        //console.log('about to hide line ' + lineId);
+        var oldLine = document.getElementById('line' + (Number(lineId)-1));
         if (!!oldLine) {
           oldLine.removeAttribute('class');
           oldLine.setAttribute('class', 'lyricHidden');
+          //console.log('completed hide line ' + lineId);
         }
       }
       
@@ -104,20 +106,24 @@
         line.setAttribute('class', 'lyricHighlight');
       }
       
-      if (lineId < karaoke.song.lyrics.length) {
-        var nextLine = document.getElementById('line' + (lineId+1));
+      if (Number(lineId) < karaoke.song.lyrics.length) {
+        //console.log("about to show line " + lineId);
+        var nextLine = document.getElementById('line' + (Number(lineId)+1));
         if (!!nextLine) {
           nextLine.removeAttribute('class');
           nextLine.setAttribute('class', 'lyricActive');
+          //console.log("completed show line " + lineId);
         }
       }
     };
     
     var unHighlightLine = function(lineId) {
+      //console.log('about to unhighlight line ' + lineId);
       var line = document.getElementById('line' + lineId);
       if (!!line) {
         line.removeAttribute('class');
         line.setAttribute('class', 'lyricActive');
+        //console.log('completed unhighlight of ' + lineId);
       }
     };
     
