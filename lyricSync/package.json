@@ -1,0 +1,9 @@
+{
+  "name": "karaoke-lyricsController",
+  "version": "0.0.1",
+  "author": "Karl Ward <karl.ward@nyu.edu>",
+  "description": "LiveWeb Karaoke Lyrics Controller",
+  "dependencies": {
+    "socket.io": "*"
+  }
+}

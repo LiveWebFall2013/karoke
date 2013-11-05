@@ -1,0 +1,133 @@
+<!doctype html>
+<html>
+<head>
+
+  <style type="text/css">
+    span.lyricHidden {
+      display: none;
+    }
+    span.lyricHighlight {
+      font-weight: bold;
+      display: inline;
+    }
+    span.lyricActive {
+      font-weight: normal;
+      display: inline;
+    }
+  </style>
+
+  <!--  include socket.io -->
+  <script src="http://localhost:8080/socket.io/socket.io.js"></script>
+
+  <script type="text/javascript">
+    var karaoke = new Object();
+
+    var socket = io.connect('http://localhost:8080');
+    
+    var getSongDB = function() {
+      // pull JSON here
+    };
+    
+    socket.on('song', function(data) {
+      karaoke.song = data;
+    });
+/*    
+    karaoke.songDB = [
+        {
+          "name" : "We Will Rock You",
+          "artist" : "Queen", 
+          "url": "http://somethingsomething",
+          "lyrics" : [
+            {
+              "startMS": 12200,
+              "endMS": 14400,
+              "line": "Buddy you're a boy make a big noise"
+            },
+            {
+              "startMS": 14500,
+              "endMS":  17600,
+              "line": "Playin' in the street gonna be a big man some day"
+            },
+            {
+              "startMS": 17700,
+              "endMS": 19300,
+              "line": "You got mud on yo' face"
+            },
+          ]
+        }
+    ]; */
+
+    var loadLyrics = function() {
+      //console.log('inside loadLyrics');
+      //console.dir(karaoke);
+      if (!!karaoke.song) {
+        var lineBox = document.getElementById('lineBox');
+        var content = "";
+        for (lineId in karaoke.song.lyrics) {
+          console.log('adding line ' + karaoke.song.lyrics[lineId].line);
+          content += '<span class="lyricHidden" id="line' + lineId + '">' + karaoke.song.lyrics[lineId].line + '<br /></span>';
+        }
+        lineBox.innerHTML = content;
+        //console.log('content should be ' + content);
+      }
+    };
+    
+    // call this as soon as the "play" button is clicked for the song audio
+    var playLyrics = function() {
+      console.log('in playLyrics');
+      for (var lineId in karaoke.song.lyrics) {
+        console.log('lineId ' + lineId);
+        var line = document.getElementById('line' + lineId);
+        if (lineId == 0) { // first line is special
+          //console.log('setting first line');
+          line.removeAttribute('class');
+          line.setAttribute('class', 'lyricActive');
+        }
+        setTimeout(highlightLine, karaoke.song.lyrics[lineId].startMS, lineId);
+        setTimeout(unHighlightLine, karaoke.song.lyrics[lineId].endMS, lineId);
+      }
+    };
+    
+    var highlightLine = function(lineId) {
+      // change CSS class on old line
+      if (lineId > 0) {
+        var oldLine = document.getElementById('line' + (lineId-1));
+        if (!!oldLine) {
+          oldLine.removeAttribute('class');
+          oldLine.setAttribute('class', 'lyricHidden');
+        }
+      }
+      
+      var line = document.getElementById('line' + lineId);
+      if (!!line) {
+        line.removeAttribute('class');
+        line.setAttribute('class', 'lyricHighlight');
+      }
+      
+      if (lineId < karaoke.song.lyrics.length) {
+        var nextLine = document.getElementById('line' + (lineId+1));
+        if (!!nextLine) {
+          nextLine.removeAttribute('class');
+          nextLine.setAttribute('class', 'lyricActive');
+        }
+      }
+    };
+    
+    var unHighlightLine = function(songId, lineId) {
+      var line = document.getElementById('line' + lineId);
+      if (!!line) {
+        line.removeAttribute('class');
+        line.setAttribute('class', 'lyricActive');
+      }
+    };
+    
+  </script>
+</head>
+<body>
+  <button type="button" onclick="loadLyrics(); playLyrics();">Play</button>
+  <div id="lineBox">
+  </div>
+
+
+</body>
+</html>
