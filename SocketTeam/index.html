@@ -1,0 +1,159 @@
+<html>
+<head>
+
+	<script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+	<script src="/socket.io/socket.io.js"></script>
+	<script type="text/javascript">
+
+     var socket=null;
+     var userList = [];
+     var status = " ";
+
+	 var init = function() {
+
+     var socket = io.connect('http://ec2-54-200-23-228.us-west-2.compute.amazonaws.com:8080/');
+
+     // once connected send the message 
+     socket.on('connect', function() {
+     	socket.emit('addUser', prompt("What's your name"));
+     });
+
+     // update the number of users and decide the singer and audience
+     socket.on('update', function(users) {
+        userList = users;
+        $('#user').empty(); //Remove all text within 'user' id
+        for (var i = 0; i < userList.length; i++) {
+            if (i == 0) {
+                status = " (singing)";
+                $('#user').append("<h3>" + userList[i] + status + "</h3>");
+            } else if (i == 1) {
+                status = " (you are next)";
+                $('#user').append("<h3>" + userList[i] + status + "</h3>");
+            } else {
+                status = " (listening)";
+                $('#user').append("<h3>" + userList[i] + status + "</h3>");
+            }
+
+        }
+
+      });
+
+     //Annoucing likes
+     socket.on("nlikes", function(data) {
+        console.log(data + "Number of like");
+        document.getElementById('like-count').innerHTML = data;
+     });
+
+     //Annoucing dislikes
+        socket.on('nDisLikes', function(data) {
+        console.log(data.toString() + ' Number of Dislikes');
+        document.getElementById('disLike-count').innerHTML = data ;
+     });
+
+     //send a msg to sever about which face we have selected
+     function selectButton(imgObj){
+        var buttonImg = new Image();
+        buttonImg.src = imgObj.src;
+        socket.emit("button_id", imgObj.id);
+     }
+
+     
+     // accept what the singer's backgound music and play
+     socket.on('othersPlayBg', function(ran){
+     	if (ran == 0){
+     		document.getElementById('bg1').play();
+     	}
+     	else if (ran == 1){
+     		document.getElementById('bg2').play();
+     	}
+     	else if (ran == 2){
+     		document.getElementById('bg3').play();
+     	}
+     });
+
+     // functio of play backgound music 
+     var playBg = function(){
+     	var ran = Math.floor(Math.random()*3);
+     	if (ran == 0){
+     		document.getElementById('bg1').play();
+     	}
+     	else if (ran == 1){
+     		document.getElementById('bg2').play();
+     	}
+     	else if (ran == 2){
+     		document.getElementById('bg3').play();
+     	}    
+        socket.send('playBg',ran);
+     }  
+
+
+     socket.on('othersFilter', function(){
+ 	    appyFilter();
+     });
+
+
+     function appyFilter() {
+
+       //send it to everyone else
+       socket.emit('appyFilter');
+
+       // Create the filter
+       var filter = audioContext.createBiquadFilter();
+
+	   // Clamp the frequency between the minimum value (40 Hz) and half of the sampling rate.
+	   var minValue = 40;
+	   var maxValue = audioContext.sampleRate / 2;
+
+	   // Logarithm (base 2) to compute how many octaves fall in the range.
+	   var numberOfOctaves = Math.log(maxValue / minValue) / Math.LN2;
+
+	   // Compute a multiplier from 0 to 1 based on an exponential scale.
+	   var multiplier = Math.pow(2, numberOfOctaves * (2));
+
+	   // Get back to the frequency value between min and max.
+	   filter.frequency.value = maxValue * multiplier * 100000;	
+
+	   // Create the audio graph.
+	   audioSource.connect(filter);
+	   filter.connect(audioContext.destination);
+       
+	 }
+    }
+
+</script>
+</head>
+
+<body onload="init()">
+
+    <div id="users">
+            <p id="user"></p>
+    </div>
+
+	<button id ="playBg" onclick="playBg()">Play Background Music</button>
+	<button id ="appyFilter" onclick="appyFilter()">Filter Start</button>
+
+	<audio id ="bg1">
+		<source src="bg1.mp3" type="audio/mpeg">
+	</audio>
+
+	<audio id ="bg2">
+		<source src="bg2.mp3" type="audio/mpeg">
+	</audio>
+
+	<audio id ="bg3">
+		<source src="bg3.mp3" type="audio/mpeg">
+	</audio>
+
+    <div>
+      <snap> <img id = "like" src="like.png" alt="like" width="25px" onclick='selectButton(this)'></snap>
+      <snap>Like</snap>
+      <snap id="like-count"></snap>
+      </br>
+
+      <snap> <img id = "disLike" src="disLike.png" alt="dislike" width="25px" onclick= 'selectButton(this)'></snap>
+      <snap>DisLike</snap>
+      <snap id="disLike-count"></snap>
+    </div>
+
+</body>
+</html>
