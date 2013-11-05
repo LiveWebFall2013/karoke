@@ -1,6 +1,7 @@
 <!doctype html>
 <html>
 <head>
+  <meta charset="UTF-8">
 
   <style type="text/css">
     span.lyricHidden {
@@ -64,7 +65,7 @@
         var lineBox = document.getElementById('lineBox');
         var content = "";
         for (lineId in karaoke.song.lyrics) {
-          console.log('adding line ' + karaoke.song.lyrics[lineId].line);
+          //console.log('adding line ' + karaoke.song.lyrics[lineId].line);
           content += '<span class="lyricHidden" id="line' + lineId + '">' + karaoke.song.lyrics[lineId].line + '<br /></span>';
         }
         lineBox.innerHTML = content;
@@ -74,57 +75,56 @@
     
     // call this as soon as the "play" button is clicked for the song audio
     var playLyrics = function() {
-      console.log('in playLyrics');
+      //console.log('in playLyrics');
       for (var lineId in karaoke.song.lyrics) {
         //console.log('lineId ' + lineId);
         var line = document.getElementById('line' + lineId);
         if (Number(lineId) === 0) { // first line is special
-          //console.log('setting first line');
-          line.removeAttribute('class');
-          line.setAttribute('class', 'lyricActive');
+          activateLine(Number(lineId));
+        }
+        else if (Number(lineId) === karaoke.song.lyrics.length) { // last line is special
+          setTimeout(hideLine, karaoke.song.lyrics[lineId].endMS, (Number(lineId) + 1));
         }
         setTimeout(highlightLine, karaoke.song.lyrics[lineId].startMS, lineId);
         setTimeout(unHighlightLine, karaoke.song.lyrics[lineId].endMS, lineId);
       }
     };
+
+    var activateLine = function(i) {
+      var line = document.getElementById('line' + Number(i));
+      if (!!line) {
+        line.removeAttribute('class');
+        line.setAttribute('class', 'lyricActive');
+      }
+    };
+
+    var hideLine = function(i) {
+      var line = document.getElementById('line' + Number(i));
+      if (!!line) {
+        line.removeAttribute('class');
+        line.setAttribute('class', 'lyricHidden');
+      }
+    };
     
-    var highlightLine = function(lineId) {
+    var highlightLine = function(i) {
       // change CSS class on old line
-      if (Number(lineId) > 0) {
-        //console.log('about to hide line ' + lineId);
-        var oldLine = document.getElementById('line' + (Number(lineId)-1));
-        if (!!oldLine) {
-          oldLine.removeAttribute('class');
-          oldLine.setAttribute('class', 'lyricHidden');
-          //console.log('completed hide line ' + lineId);
-        }
+      if (Number(i) > 0) {
+        hideLine(Number(i) - 1);
       }
       
-      var line = document.getElementById('line' + lineId);
+      var line = document.getElementById('line' + Number(i));
       if (!!line) {
         line.removeAttribute('class');
         line.setAttribute('class', 'lyricHighlight');
       }
       
-      if (Number(lineId) < karaoke.song.lyrics.length) {
-        //console.log("about to show line " + lineId);
-        var nextLine = document.getElementById('line' + (Number(lineId)+1));
-        if (!!nextLine) {
-          nextLine.removeAttribute('class');
-          nextLine.setAttribute('class', 'lyricActive');
-          //console.log("completed show line " + lineId);
-        }
+      if (Number(i) < karaoke.song.lyrics.length) {
+        activateLine(Number(i) + 1);
       }
     };
     
-    var unHighlightLine = function(lineId) {
-      //console.log('about to unhighlight line ' + lineId);
-      var line = document.getElementById('line' + lineId);
-      if (!!line) {
-        line.removeAttribute('class');
-        line.setAttribute('class', 'lyricActive');
-        //console.log('completed unhighlight of ' + lineId);
-      }
+    var unHighlightLine = function(i) {
+      activateLine(Number(i));
     };
     
   </script>
